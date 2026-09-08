@@ -1,0 +1,43 @@
+import type { Face } from '../engine/faces';
+
+export const FACE_IMAGES: Record<Face, number> = {
+  cat: require('../../assets/faces/face-cat.png'),
+  dog: require('../../assets/faces/face-dog.png'),
+  rabbit: require('../../assets/faces/face-rabbit.png'),
+  greycat: require('../../assets/faces/face-greycat.png'),
+  corgi: require('../../assets/faces/face-corgi.png'),
+  bird: require('../../assets/faces/face-bird.png'),
+  panda: require('../../assets/faces/face-panda.png'),
+  calico: require('../../assets/faces/face-calico.png'),
+  fish: require('../../assets/faces/face-fish.png'),
+  fox: require('../../assets/faces/face-fox.png'),
+  shiba: require('../../assets/faces/face-shiba.png'),
+  owl: require('../../assets/faces/face-owl.png'),
+  blackcat: require('../../assets/faces/face-blackcat.png'),
+  dragon: require('../../assets/faces/face-dragon.png'),
+  arctic: require('../../assets/faces/face-arctic.png'),
+  teapot: require('../../assets/faces/face-teapot.png'),
+  teacup: require('../../assets/faces/face-teacup.png'),
+  lantern: require('../../assets/faces/face-lantern.png'),
+  dumpling: require('../../assets/faces/face-dumpling.png'),
+  fan: require('../../assets/faces/face-fan.png'),
+  blossom: require('../../assets/faces/face-blossom.png'),
+  peach: require('../../assets/faces/face-peach.png'),
+  husky: require('../../assets/faces/face-husky.png'),
+  lotus: require('../../assets/faces/face-lotus.png'),
+  mooncake: require('../../assets/faces/face-mooncake.png'),
+  frog: require('../../assets/faces/face-frog.png'),
+  squirrel: require('../../assets/faces/face-squirrel.png'),
+  duck: require('../../assets/faces/face-duck.png'),
+  kettle: require('../../assets/faces/face-kettle.png'),
+  celadon: require('../../assets/faces/face-celadon.png'),
+  persimmon: require('../../assets/faces/face-persimmon.png'),
+  bun: require('../../assets/faces/face-bun.png'),
+};
+
+export const IMAGES = {
+  splash: require('../../assets/splash.png'),
+  companion: require('../../assets/companion.png'),
+  icon: require('../../assets/icon.png'),
+  tilePaper: require('../../assets/tile-paper.png'),
+};

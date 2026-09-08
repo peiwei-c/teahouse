@@ -1,0 +1,58 @@
+{
+  "expo": {
+    "name": "Tea House",
+    "slug": "tea-house-solitaire",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "primaryColor": "#c45c3a",
+    "description": "A calm animal-matching solitaire at a tea-house table. Made for playing at home.",
+    "splash": {
+      "image": "./assets/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#3a1c10"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.teahouse.solitaire",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.teahouse.solitaire",
+      "adaptiveIcon": {
+        "backgroundColor": "#1e4a32",
+        "foregroundImage": "./assets/icon.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/icon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#3a1c10",
+          "image": "./assets/icon.png",
+          "imageWidth": 200
+        }
+      ],
+      "expo-font",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3994151354323315~3295465877",
+          "iosAppId": "ca-app-pub-3994151354323315~3295465877"
+        }
+      ]
+    ]
+  },
+  "react-native-google-mobile-ads": {
+    "android_app_id": "ca-app-pub-3994151354323315~3295465877",
+    "ios_app_id": "ca-app-pub-3994151354323315~3295465877"
+  }
+}

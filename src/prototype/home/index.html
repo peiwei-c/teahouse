@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mahjong Solitaire · Cute home UI prototype</title>
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <!--
+    PROTOTYPE — throwaway.
+    Chosen direction: B Tea House Table.
+    Question: Does a table companion (Hint = point at a pair, stuck = kind shuffle)
+    plus Undo feel like the product — still Play + Settings only on home?
+  -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Fredoka:wght@500;600;700&family=Nunito:wght@700;800&family=Noto+Sans+SC:wght@700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --device-w: 390px;
+      --device-h: 844px;
+      --status-h: 54px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      min-height: 100%;
+      background: #ead7c0;
+      color: #3a2a22;
+      font-family: Nunito, system-ui, sans-serif;
+    }
+    button { font: inherit; }
+    .stage {
+      min-height: 100dvh;
+      display: grid;
+      place-items: center;
+      padding: 48px 16px 168px;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -10%, #f6e6d2 0%, transparent 55%),
+        #ead7c0;
+    }
+    .meta {
+      position: fixed;
+      top: 14px; left: 16px; right: 16px;
+      z-index: 40;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      pointer-events: none;
+      font-size: 12px;
+      color: rgba(58,42,34,0.55);
+    }
+    .meta strong { color: rgba(58,42,34,0.88); }
+    .state-dump {
+      position: fixed;
+      top: 42px; right: 16px;
+      z-index: 40;
+      width: min(280px, 32vw);
+      max-height: 42dvh;
+      overflow: auto;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(28, 22, 18, 0.78);
+      color: #d7f5c8;
+      font: 11px/1.45 ui-monospace, monospace;
+      white-space: pre;
+    }
+    @media (max-width: 920px) { .state-dump { display: none; } }
+
+    .phone {
+      width: var(--device-w);
+      height: var(--device-h);
+      border-radius: 44px;
+      overflow: hidden;
+      position: relative;
+      background: #f4e4d0;
+      box-shadow:
+        0 0 0 1px rgba(74,34,28,0.12),
+        0 0 0 8px #5a3a28,
+        0 28px 60px rgba(74,34,28,0.28);
+    }
+    .status-bar {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: var(--status-h);
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 22px;
+      font-size: 14px;
+      font-weight: 800;
+      pointer-events: none;
+    }
+    [data-variant="A"] .status-bar {
+      background: rgba(238, 245, 228, 0.94);
+      color: #2c4a32;
+    }
+    [data-variant="C"] .status-bar {
+      background: rgba(253, 232, 208, 0.94);
+      color: #5a3428;
+    }
+    .status-notch {
+      position: absolute;
+      left: 50%; top: 10px;
+      transform: translateX(-50%);
+      width: 118px; height: 32px;
+      background: #1a1210;
+      border-radius: 20px;
+      pointer-events: none;
+      z-index: 41;
+    }
+    .variant-root { position: absolute; inset: 0; }
+    .screen {
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+      position: absolute;
+      inset: 0;
+      padding-top: calc(var(--status-h) + 8px);
+    }
+    .screen.active { display: flex; }
+
+    .switcher, .flow-bar {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px;
+      background: #fff6ee;
+      color: #1a1210;
+      border-radius: 999px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.28);
+      user-select: none;
+    }
+    .switcher { bottom: 28px; font: 600 12px/1 ui-monospace, "SF Mono", monospace; }
+    .flow-bar { bottom: 76px; }
+    .switcher button, .flow-bar button {
+      border: 0; background: transparent;
+      cursor: pointer;
+      border-radius: 999px;
+    }
+    .switcher button { width: 36px; height: 36px; font-size: 16px; color: #1a1210; }
+    .switcher button:hover, .flow-bar button:hover { background: rgba(0,0,0,0.06); }
+    .switcher .label { min-width: 250px; text-align: center; padding: 0 8px; }
+    .flow-bar button {
+      color: #7a564c;
+      font: 700 11px/1 Nunito, sans-serif;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 8px 14px;
+    }
+    .flow-bar button.on { background: #c45c3a; color: #fff; }
+
+    .btn {
+      border: 0;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: transform 0.12s ease;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
+
+    .mj {
+      width: 42px;
+      height: 56px;
+      border-radius: 10px;
+      background: linear-gradient(165deg, #fffef9 0%, #f6e6c8 78%, #ead4a8 100%);
+      border: 2.5px solid #2a1608;
+      box-shadow:
+        inset 0 3px 0 rgba(255,255,255,0.85),
+        inset 0 -4px 0 rgba(90, 48, 16, 0.12),
+        6px 7px 0 #8a5420,
+        7px 8px 0 #2a1608;
+      display: grid;
+      place-items: center;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .mj::before {
+      content: "";
+      position: absolute;
+      inset: 4px 4px 6px 4px;
+      border-radius: 7px;
+      border: 2px solid rgba(42, 22, 8, 0.18);
+      pointer-events: none;
+    }
+    .mj.lg { width: 50px; height: 66px; border-radius: 12px; }
+    .phone.large-tiles .mj { width: 46px; height: 60px; }
+    .critter { width: 72%; height: auto; display: block; position: relative; z-index: 1; }
+
+    .play-stack { flex: 1; display: grid; place-items: center; padding: 4px 8px 12px; }
+    .turtle { position: relative; width: 320px; height: 340px; }
+    .turtle .mj { position: absolute; }
+    .turtle .free { outline: 3px solid #e8c547; outline-offset: 1px; }
+    .back-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 16px 8px;
+    }
+    .back-btn {
+      min-height: 52px;
+      padding: 0 18px;
+      border-radius: 999px;
+      font-size: 18px;
+      font-weight: 800;
+    }
+    .hint-line { padding: 0 16px 6px; font-size: 15px; font-weight: 800; }
+
+    .settings-list { display: flex; flex-direction: column; gap: 12px; padding: 8px 18px 24px; }
+    .setting-row {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 84px;
+      padding: 14px 18px;
+      border-radius: 22px;
+      text-align: left;
+    }
+    .setting-row strong { display: block; font-size: 22px; }
+    .setting-row span { display: block; font-size: 15px; opacity: 0.72; margin-top: 2px; font-weight: 700; }
+    .toggle {
+      width: 68px; height: 38px;
+      border-radius: 999px;
+      background: #c9b8a8;
+      position: relative;
+      flex-shrink: 0;
+      border: 0;
+      cursor: pointer;
+    }
+    .toggle.on { background: #3d8a5a; }
+    .toggle::after {
+      content: "";
+      position: absolute;
+      top: 4px; left: 4px;
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      background: #fff;
+      transition: transform 0.16s ease;
+    }
+    .toggle.on::after { transform: translateX(30px); }
+
+    /* A — Garden Morning */
+    [data-variant="A"] .status-bar { color: #2c4a32; }
+    [data-variant="A"] .status-notch { background: #243828; }
+    .a-home {
+      background:
+        radial-gradient(ellipse 90% 50% at 50% 0%, #fff8e8 0%, transparent 50%),
+        linear-gradient(180deg, #eef5e4 0%, #d7ead0 48%, #cfe0c4 100%);
+      padding-left: 22px;
+      padding-right: 22px;
+      padding-bottom: 28px;
+    }
+    .a-bloom {
+      position: absolute;
+      width: 86px; height: 86px;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .a-bloom.one { top: 70px; left: -28px; background: radial-gradient(circle, #f4b4a0, #e07a5f 62%, transparent 63%); }
+    .a-bloom.two { top: 110px; right: -34px; background: radial-gradient(circle, #f7d48b, #e8b84a 60%, transparent 61%); }
+    .a-hello { font-size: 18px; color: #4a6a50; font-weight: 800; margin-top: 6px; }
+    .a-title { font-family: Fraunces, serif; font-size: 36px; color: #243828; line-height: 1.08; margin-top: 2px; }
+    .a-sub { font-size: 16px; color: #4a6a50; margin-top: 4px; font-weight: 700; }
+    .a-hero { flex: 1; display: grid; place-items: center; position: relative; }
+    .a-window {
+      width: 230px; height: 230px;
+      border-radius: 50%;
+      background: linear-gradient(180deg, #b9d8ee 0%, #d7ecf6 42%, #c5e0b8 43%, #8fbf7a 100%);
+      border: 10px solid #fffdf6;
+      box-shadow: 0 16px 32px rgba(36,56,40,0.16);
+      position: relative;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+    }
+    .a-sun {
+      position: absolute; top: 28px; right: 36px;
+      width: 42px; height: 42px;
+      border-radius: 50%;
+      background: #ffe08a;
+      box-shadow: 0 0 0 8px rgba(255,224,138,0.35);
+    }
+    .a-actions { display: flex; flex-direction: column; gap: 12px; }
+    .a-play {
+      min-height: 88px;
+      border-radius: 28px;
+      background: #c45c3a;
+      color: #fffdf8;
+      font-size: 32px;
+      font-weight: 800;
+      font-family: Fredoka, Nunito, sans-serif;
+      box-shadow: 0 10px 0 #8f3d26;
+    }
+    .a-settings {
+      min-height: 68px;
+      border-radius: 24px;
+      background: #fffdf6;
+      color: #243828;
+      font-size: 24px;
+      font-weight: 800;
+      border: 3px solid #243828;
+    }
+    .a-play-screen, .a-set-screen { background: linear-gradient(180deg, #eef5e4, #d7ead0); color: #243828; }
+    .a-play-screen .back-btn, .a-set-screen .back-btn {
+      background: #fffdf6; color: #243828; border: 2px solid #243828;
+    }
+    .a-set-screen .setting-row { background: #fffdf6; color: #243828; }
+
+    /* B — Tea House Table (enriched) */
+    [data-variant="B"] .status-bar {
+      color: #ffe9b0;
+      background: #3a1c10;
+    }
+    [data-variant="B"] .status-notch { background: #1a0e08; }
+    [data-variant="B"] .screen { padding-top: var(--status-h); }
+    [data-variant="B"] .mj {
+      background: linear-gradient(165deg, #fffef9 0%, #f6e6c8 78%, #ead4a8 100%);
+      border: 2.5px solid #2a1608;
+      box-shadow:
+        inset 0 3px 0 rgba(255,255,255,0.85),
+        inset 0 -4px 0 rgba(90, 48, 16, 0.12),
+        6px 7px 0 #8a5420,
+        7px 8px 0 #2a1608;
+    }
+    [data-variant="B"] .mj.lg {
+      width: 50px; height: 66px;
+      box-shadow:
+        inset 0 3px 0 rgba(255,255,255,0.85),
+        inset 0 -4px 0 rgba(90, 48, 16, 0.12),
+        7px 8px 0 #8a5420,
+        8px 9px 0 #2a1608;
+    }
+    [data-variant="B"] .mj.free {
+      outline: 0;
+      box-shadow:
+        inset 0 3px 0 rgba(255,255,255,0.85),
+        0 0 0 3px #ffe08a,
+        6px 7px 0 #8a5420,
+        7px 8px 0 #2a1608,
+        0 0 16px rgba(255, 214, 80, 0.7);
+    }
+    [data-variant="B"] .mj.picked,
+    [data-variant="B"] .mj.pointed {
+      transform: translate(-2px, -8px);
+      box-shadow:
+        inset 0 3px 0 rgba(255,255,255,0.85),
+        0 0 0 3px #fff6c8,
+        9px 12px 0 #8a5420,
+        10px 13px 0 #2a1608,
+        0 0 22px rgba(255, 230, 140, 0.9);
+    }
+    [data-variant="B"] .mj.gone { visibility: hidden; pointer-events: none; }
+
+    .b-table {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      background:
+        repeating-linear-gradient(90deg, #4a2410 0 10px, #6e3c18 10px 18px, #5a3014 18px 26px),
+        #5a3014;
+      box-shadow: inset 0 0 0 10px #4a2410, inset 0 0 0 15px #d4b05a;
+    }
+    .b-felt {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      margin: 12px 14px 12px;
+      border-radius: 22px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      background:
+        radial-gradient(ellipse 90% 55% at 50% 22%, rgba(255, 214, 120, 0.32), transparent 52%),
+        repeating-radial-gradient(circle at 12px 12px, rgba(255,255,255,0.045) 0 1.2px, transparent 1.6px 14px),
+        repeating-linear-gradient(135deg, rgba(0,0,0,0.06) 0 8px, transparent 8px 16px),
+        radial-gradient(circle at 50% 42%, #25925f, #0d4630 74%);
+      box-shadow:
+        inset 0 0 48px rgba(8, 24, 16, 0.45),
+        inset 0 8px 18px rgba(255, 230, 160, 0.12);
+    }
+    .b-felt::after {
+      content: "";
+      position: absolute;
+      inset: 10px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 214, 120, 0.14);
+      pointer-events: none;
+    }
+    .b-lantern {
+      position: absolute;
+      top: 8px;
+      width: 38px;
+      height: 54px;
+      z-index: 1;
+      pointer-events: none;
+      background:
+        repeating-linear-gradient(90deg, transparent 0 6px, rgba(255,255,255,0.18) 6px 7px),
+        linear-gradient(180deg, #ffe08a, #e07040);
+      border-radius: 42% 42% 18% 18%;
+      box-shadow: 0 12px 28px rgba(255, 180, 60, 0.55);
+    }
+    .b-lantern::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: -8px;
+      width: 2px;
+      height: 10px;
+      background: #e8c547;
+      transform: translateX(-50%);
+    }
+    .b-lantern.left { left: 16px; }
+    .b-lantern.right { right: 16px; }
+    .b-felt.is-centered,
+    .b-home .b-felt,
+    .b-set-screen .b-felt,
+    .b-play-screen .b-felt {
+      display: grid;
+      place-items: center;
+    }
+    .b-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      width: 100%;
+      min-height: 0;
+      z-index: 2;
+      padding: 16px 12px 18px;
+    }
+    .b-home .b-center,
+    .b-set-screen .b-center {
+      height: auto;
+    }
+    .b-plaque {
+      position: relative;
+      z-index: 2;
+      align-self: center;
+      margin: 0;
+      min-width: 0;
+      text-align: center;
+      background: linear-gradient(180deg, #f0d48a, #d4a84a);
+      color: #2a1a08;
+      padding: 10px 22px 12px;
+      border-radius: 8px;
+      box-shadow:
+        0 0 0 2px #fff3c0,
+        0 8px 0 #8a5a18,
+        0 12px 18px rgba(0,0,0,0.25);
+    }
+    .b-plaque small { display: block; font-size: 13px; font-weight: 800; letter-spacing: 0.04em; }
+    .b-plaque strong { display: block; font-family: Fraunces, serif; font-size: 26px; line-height: 1.1; }
+    .b-plaque-line { display: block; margin-top: 4px; font-style: normal; font-size: 14px; font-weight: 800; opacity: 0.75; }
+    .b-spread {
+      position: relative;
+      z-index: 2;
+      width: 340px;
+      height: 188px;
+      margin: 0 auto;
+      flex-shrink: 0;
+    }
+    .b-spread .mj { position: absolute; }
+    .b-spread .mj.lg { width: 50px; height: 66px; }
+    .b-tea {
+      position: absolute;
+      left: 10px;
+      right: auto;
+      bottom: 10px;
+      z-index: 1;
+      pointer-events: none;
+      width: 88px;
+      height: 80px;
+    }
+    .b-steam {
+      position: absolute;
+      left: 30px;
+      right: auto;
+      bottom: 56px;
+      width: 8px;
+      height: 22px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.28);
+      animation: steam 2.8s ease-in-out infinite;
+    }
+    @keyframes steam {
+      0%, 100% { opacity: 0.15; transform: translateY(6px) scaleX(0.8); }
+      50% { opacity: 0.5; transform: translateY(-6px) scaleX(1); }
+    }
+    .b-tray {
+      display: flex;
+      gap: 12px;
+      align-items: stretch;
+      width: 100%;
+      max-width: 340px;
+      margin: 0;
+      padding: 12px;
+      border-radius: 18px;
+      background: linear-gradient(180deg, #7a4a24, #4a2814);
+      box-shadow: inset 0 1px 0 rgba(255,220,160,0.25), 0 8px 0 #2a1408;
+      flex-shrink: 0;
+    }
+    .b-play {
+      flex: 1;
+      min-height: 104px;
+      border-radius: 16px;
+      background: linear-gradient(180deg, #fffef6, #f3e4c4);
+      color: #c43c3c;
+      flex-direction: column;
+      border: 2px solid #fff8e0;
+      box-shadow: 5px 7px 0 #2a1408, 7px 9px 0 #c4a056;
+      font-family: Fraunces, serif;
+    }
+    .b-play strong { font-size: 34px; color: #2a1a08; font-family: Fredoka, sans-serif; }
+    .b-play em { font-style: normal; font-size: 15px; color: #6a5840; font-family: Nunito, sans-serif; font-weight: 800; }
+    .b-settings {
+      width: 96px;
+      border-radius: 16px;
+      background: linear-gradient(180deg, #e8c547, #c9a15b);
+      color: #2a1a08;
+      flex-direction: column;
+      font-size: 16px;
+      font-weight: 800;
+      line-height: 1.15;
+      text-align: center;
+      padding: 12px 8px;
+      box-shadow: 0 8px 0 #8a5a18;
+    }
+
+    .b-hud {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 12px 14px 8px;
+      z-index: 2;
+      position: relative;
+    }
+    .b-hud .back-btn, .b-chip {
+      min-height: 54px;
+      border-radius: 16px;
+      background: linear-gradient(180deg, #fff6e0, #e8d0a0);
+      color: #2a1a08;
+      font-size: 18px;
+      font-weight: 800;
+      padding: 0 14px;
+      box-shadow: 0 5px 0 #5a3418;
+    }
+    .b-chip {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      line-height: 1.1;
+    }
+    .b-chip b { font-family: Fraunces, serif; font-size: 22px; }
+    .b-chip span { font-size: 12px; font-weight: 800; opacity: 0.7; }
+    .b-board-wrap {
+      display: grid;
+      place-items: center;
+      width: 100%;
+      height: 100%;
+      padding: 8px 4px 8px;
+    }
+    .b-turtle {
+      position: relative;
+      width: 380px;
+      height: 320px;
+    }
+    .b-turtle .mj { position: absolute; width: 44px; height: 58px; }
+    .phone.large-tiles .b-turtle .mj { width: 46px; height: 60px; }
+    .b-how {
+      position: relative;
+      z-index: 2;
+      margin: 8px 18px 18px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: linear-gradient(180deg, #fff6e0, #f0dcb0);
+      color: #2a1a08;
+      box-shadow: 0 6px 0 #5a3418;
+    }
+    .b-how strong { display: block; font-size: 20px; }
+    .b-how span { display: block; margin-top: 4px; font-size: 15px; font-weight: 700; opacity: 0.75; }
+    .b-set-screen .b-felt { overflow: hidden; }
+    .b-set-screen .settings-list {
+      padding: 0;
+      width: 100%;
+      max-width: 340px;
+    }
+    .b-set-screen .b-how { width: 100%; max-width: 340px; margin: 0; }
+    .b-set-screen .setting-row {
+      background: linear-gradient(180deg, #fff6e0, #f0dcb0);
+      color: #2a1a08;
+      border-radius: 16px;
+      box-shadow: 0 6px 0 #5a3418;
+    }
+    .b-play-stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      padding: 4px 8px 8px;
+    }
+    .b-buddy {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      width: 100%;
+      max-width: 340px;
+      padding: 0 4px;
+      pointer-events: none;
+    }
+    .b-bubble {
+      flex: 1;
+      background: #fffdf8;
+      color: #2a1a08;
+      font-size: 16px;
+      font-weight: 800;
+      line-height: 1.25;
+      padding: 10px 14px;
+      border-radius: 18px 18px 6px 18px;
+      box-shadow: 0 6px 0 #5a3418;
+    }
+    .b-cat { flex-shrink: 0; }
+    [data-variant="B"] .mj.pointed {
+      outline: 0;
+      box-shadow:
+        inset 0 1px 0 #fff,
+        0 0 0 4px #ffe08a,
+        4px 5px 0 #5a3418,
+        0 0 22px rgba(255, 214, 80, 0.9);
+      transform: translate(-2px, -6px);
+    }
+    .b-dock {
+      display: flex;
+      gap: 12px;
+      margin: 0 14px 16px;
+    }
+    .b-dock .btn {
+      flex: 1;
+      min-height: 60px;
+      border-radius: 16px;
+      background: linear-gradient(180deg, #fff6e0, #e8d0a0);
+      color: #2a1a08;
+      font-size: 22px;
+      font-weight: 800;
+      box-shadow: 0 6px 0 #5a3418;
+    }
+    .b-dock .btn[disabled] { opacity: 0.45; }
+
+    /* C — Tea Companion */
+    [data-variant="C"] .status-bar { color: #5a3428; }
+    [data-variant="C"] .status-notch { background: #4a281c; }
+    .c-home {
+      background:
+        radial-gradient(circle at 12% 18%, rgba(255,255,255,0.55), transparent 22%),
+        linear-gradient(180deg, #fde8d0 0%, #f7d3b0 100%);
+      padding-left: 18px;
+      padding-right: 18px;
+      padding-bottom: 22px;
+    }
+    .c-brand { text-align: center; margin-top: 4px; }
+    .c-brand small { display: block; font-size: 16px; color: #8a5440; font-weight: 800; }
+    .c-brand strong {
+      display: block;
+      font-family: Fraunces, serif;
+      font-size: 32px;
+      color: #4a281c;
+      line-height: 1.08;
+    }
+    .c-buddy {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .c-bubble {
+      background: #fffdf8;
+      color: #4a281c;
+      font-size: 20px;
+      font-weight: 800;
+      padding: 12px 18px;
+      border-radius: 22px 22px 22px 8px;
+      box-shadow: 0 8px 0 rgba(74,40,28,0.12);
+    }
+    .c-tiles {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .c-tile {
+      min-height: 168px;
+      border-radius: 28px;
+      flex-direction: column;
+      gap: 8px;
+      color: #fffdf8;
+      font-family: Fredoka, sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+    }
+    .c-tile.play { background: #d4654a; box-shadow: 0 10px 0 #9a3c28; }
+    .c-tile.settings { background: #2a9d8f; box-shadow: 0 10px 0 #1b6e64; }
+    .c-play-screen, .c-set-screen { background: #fde8d0; color: #4a281c; }
+    .c-play-screen .back-btn, .c-set-screen .back-btn {
+      background: #fffdf8; color: #4a281c; border: 2px solid #4a281c;
+    }
+    .c-set-screen .setting-row { background: #fffdf8; }
+  </style>
+</head>
+<body>
+  <div class="meta">
+    <div>Throwaway prototype · <strong>B tea house</strong> enriched · <code>?variant=A|B|C</code></div>
+    <div id="stateLabel"></div>
+  </div>
+  <pre class="state-dump" id="stateDump"></pre>
+
+  <div class="stage">
+    <div id="deviceShell">
+      <div class="phone" id="phone">
+        <div class="status-bar">
+          <span class="clock" id="clock">9:41</span>
+          <span>5G  ■■■</span>
+        </div>
+        <div class="status-notch"></div>
+
+        <div class="variant-root" data-for="A">
+          <section class="screen a-home" data-screen="home">
+            <div class="a-bloom one"></div>
+            <div class="a-bloom two"></div>
+            <p class="a-hello" data-greet>Good afternoon</p>
+            <h1 class="a-title">Mahjong Solitaire</h1>
+            <p class="a-sub">Match the tiles, one pair at a time</p>
+            <div class="a-hero">
+              <div class="a-window">
+                <div class="a-sun"></div>
+                <svg viewBox="0 0 220 220" width="210" height="210" aria-hidden="true">
+                  <ellipse cx="110" cy="196" rx="64" ry="12" fill="rgba(36,56,40,0.14)"/>
+                  <g transform="translate(73 108)">
+                    <rect x="0" y="0" width="74" height="96" rx="12" fill="#fffdf8" stroke="#2a1608" stroke-width="4"/>
+                    <circle cx="37" cy="52" r="16" fill="#f4a261"/>
+                    <ellipse cx="24" cy="36" rx="6" ry="9" fill="#f4a261"/>
+                    <ellipse cx="50" cy="36" rx="6" ry="9" fill="#f4a261"/>
+                    <circle cx="30" cy="50" r="3" fill="#2a1810"/>
+                    <circle cx="44" cy="50" r="3" fill="#2a1810"/>
+                  </g>
+                  <ellipse cx="110" cy="104" rx="38" ry="32" fill="#e07a5f"/>
+                  <ellipse cx="92" cy="88" rx="10" ry="14" fill="#c45c3a"/>
+                  <ellipse cx="128" cy="88" rx="10" ry="14" fill="#c45c3a"/>
+                  <circle cx="98" cy="102" r="4" fill="#2a2410"/>
+                  <circle cx="122" cy="102" r="4" fill="#2a2410"/>
+                  <ellipse cx="110" cy="114" rx="7" ry="5" fill="#f4c4a8"/>
+                </svg>
+              </div>
+            </div>
+            <div class="a-actions">
+              <button class="btn a-play" data-go="play">Play</button>
+              <button class="btn a-settings" data-go="settings">Settings</button>
+            </div>
+          </section>
+          <section class="screen a-play-screen" data-screen="play"></section>
+          <section class="screen a-set-screen" data-screen="settings"></section>
+        </div>
+
+        <div class="variant-root" data-for="B" hidden>
+          <section class="screen b-home" data-screen="home">
+            <div class="b-table">
+              <div class="b-felt is-centered">
+                <div class="b-lantern left"></div>
+                <div class="b-lantern right"></div>
+                <div class="b-center">
+                  <div class="b-plaque">
+                    <small data-greet>Good afternoon</small>
+                    <strong>Mahjong Solitaire</strong>
+                    <em class="b-plaque-line">The table is ready</em>
+                  </div>
+                  <div class="b-spread" aria-hidden="true"></div>
+                  <div class="b-tray">
+                    <button class="btn b-play" data-go="play">
+                      <svg class="critter" viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><circle cx="16" cy="18" r="10" fill="#f4a261"/><ellipse cx="8" cy="8" rx="4" ry="6" fill="#f4a261"/><ellipse cx="24" cy="8" rx="4" ry="6" fill="#f4a261"/><circle cx="12" cy="17" r="1.8" fill="#2a1810"/><circle cx="20" cy="17" r="1.8" fill="#2a1810"/><ellipse cx="16" cy="21" rx="2.2" ry="1.5" fill="#e76f51"/></svg>
+                      <strong>Play</strong>
+                      <em>Sit down for a round</em>
+                    </button>
+                    <button class="btn b-settings" data-go="settings">Settings</button>
+                  </div>
+                </div>
+                <div class="b-steam"></div>
+                <svg class="b-tea" width="88" height="80" viewBox="0 0 64 58" aria-hidden="true">
+                  <ellipse cx="28" cy="50" rx="18" ry="5" fill="rgba(0,0,0,0.18)"/>
+                  <path d="M12 28c0-8 8-14 16-14s16 6 16 14v10H12V28z" fill="#f4e4c4"/>
+                  <path d="M44 30c8 0 12 6 8 12-3 4-8 4-12 2" fill="none" stroke="#f4e4c4" stroke-width="5" stroke-linecap="round"/>
+                  <ellipse cx="28" cy="16" rx="10" ry="4" fill="#c45c3a"/>
+                  <circle cx="52" cy="42" r="8" fill="#fff6e0"/>
+                  <ellipse cx="52" cy="38" rx="5" ry="2" fill="#c45c3a"/>
+                </svg>
+              </div>
+            </div>
+          </section>
+          <section class="screen b-play-screen" data-screen="play"></section>
+          <section class="screen b-set-screen" data-screen="settings"></section>
+        </div>
+
+        <div class="variant-root" data-for="C" hidden>
+          <section class="screen c-home" data-screen="home">
+            <div class="c-brand">
+              <small data-greet>Good afternoon</small>
+              <strong>Mahjong Solitaire</strong>
+            </div>
+            <div class="c-buddy">
+              <p class="c-bubble">Shall we match a pair?</p>
+              <svg viewBox="0 0 220 160" width="220" height="150" aria-hidden="true">
+                <ellipse cx="100" cy="148" rx="54" ry="10" fill="rgba(74,40,28,0.12)"/>
+                <circle cx="100" cy="92" r="52" fill="#f4a261"/>
+                <ellipse cx="68" cy="48" rx="16" ry="22" fill="#f4a261"/>
+                <ellipse cx="132" cy="48" rx="16" ry="22" fill="#f4a261"/>
+                <path d="M78 88 q22 18 44 0" fill="none" stroke="#4a281c" stroke-width="4" stroke-linecap="round"/>
+                <circle cx="82" cy="84" r="5" fill="#4a281c"/>
+                <circle cx="118" cy="84" r="5" fill="#4a281c"/>
+                <ellipse cx="100" cy="100" rx="8" ry="6" fill="#e76f51"/>
+                <rect x="132" y="78" width="54" height="70" rx="8" fill="#fffdf8" stroke="#2a1608" stroke-width="3"/>
+                <circle cx="159" cy="112" r="14" fill="#3d9a5a"/>
+                <polygon points="150,96 155,108 144,108" fill="#2f7a3a"/>
+                <polygon points="168,96 163,108 174,108" fill="#2f7a3a"/>
+                <circle cx="154" cy="110" r="2" fill="#2a1810"/>
+                <circle cx="164" cy="110" r="2" fill="#2a1810"/>
+              </svg>
+            </div>
+            <div class="c-tiles">
+              <button class="btn c-tile play" data-go="play">
+                <div class="mj"><svg class="critter" viewBox="0 0 32 32"><circle cx="16" cy="18" r="10" fill="#f4a261"/><ellipse cx="8" cy="8" rx="4" ry="6" fill="#f4a261"/><ellipse cx="24" cy="8" rx="4" ry="6" fill="#f4a261"/><circle cx="12" cy="17" r="1.8" fill="#2a1810"/><circle cx="20" cy="17" r="1.8" fill="#2a1810"/></svg></div>
+                Play
+              </button>
+              <button class="btn c-tile settings" data-go="settings">
+                <svg viewBox="0 0 48 48" width="42" height="42" fill="none" aria-hidden="true">
+                  <circle cx="24" cy="24" r="8" stroke="#fffdf8" stroke-width="4"/>
+                  <path d="M24 6v6M24 36v6M6 24h6M36 24h6M11 11l4 4M33 33l4 4M11 37l4-4M33 15l4-4" stroke="#fffdf8" stroke-width="4" stroke-linecap="round"/>
+                </svg>
+                Settings
+              </button>
+            </div>
+          </section>
+          <section class="screen c-play-screen" data-screen="play"></section>
+          <section class="screen c-set-screen" data-screen="settings"></section>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-bar" aria-label="Prototype screens">
+    <button data-flow="home" class="on">Home</button>
+    <button data-flow="play">Play</button>
+    <button data-flow="settings">Settings</button>
+  </div>
+  <div class="switcher" aria-label="Variant switcher">
+    <button id="prevVar" type="button" aria-label="Previous variant">←</button>
+    <div class="label" id="varLabel">B — Tea House Table</div>
+    <button id="nextVar" type="button" aria-label="Next variant">→</button>
+  </div>
+
+  <script>
+    const VARIANTS = {
+      A: { name: "Garden Morning" },
+      B: { name: "Tea House Table" },
+      C: { name: "Tea Companion" },
+    };
+    const KEYS = Object.keys(VARIANTS);
+    const FACES = {
+      cat: '<svg class="critter" viewBox="0 0 32 32"><circle cx="16" cy="18" r="10" fill="#f4a261"/><ellipse cx="8" cy="8" rx="4" ry="6" fill="#f4a261"/><ellipse cx="24" cy="8" rx="4" ry="6" fill="#f4a261"/><ellipse cx="8" cy="9" rx="2" ry="3" fill="#e76f51"/><ellipse cx="24" cy="9" rx="2" ry="3" fill="#e76f51"/><circle cx="12" cy="17" r="1.8" fill="#2a1810"/><circle cx="20" cy="17" r="1.8" fill="#2a1810"/><ellipse cx="16" cy="21" rx="2.2" ry="1.5" fill="#e76f51"/></svg>',
+      dog: '<svg class="critter" viewBox="0 0 32 32"><ellipse cx="16" cy="19" rx="10" ry="9" fill="#d4924a"/><ellipse cx="6" cy="14" rx="4.5" ry="7" fill="#9a5a22" transform="rotate(-28 6 14)"/><ellipse cx="26" cy="14" rx="4.5" ry="7" fill="#9a5a22" transform="rotate(28 26 14)"/><circle cx="12" cy="18" r="1.8" fill="#2a1810"/><circle cx="20" cy="18" r="1.8" fill="#2a1810"/><ellipse cx="16" cy="22" rx="3" ry="2" fill="#f4c4a0"/><circle cx="16" cy="22" r="1.2" fill="#2a1810"/></svg>',
+      dragon: '<svg class="critter" viewBox="0 0 32 32"><ellipse cx="16" cy="19" rx="10" ry="9" fill="#3d9a5a"/><polygon points="8,8 11,16 5,15" fill="#2f7a3a"/><polygon points="24,8 21,16 27,15" fill="#2f7a3a"/><circle cx="12" cy="18" r="2" fill="#ffe08a"/><circle cx="20" cy="18" r="2" fill="#ffe08a"/><circle cx="12" cy="18" r="1" fill="#2a1810"/><circle cx="20" cy="18" r="1" fill="#2a1810"/><path d="M8 22 q8 6 16 0" fill="none" stroke="#c43c3c" stroke-width="1.6" stroke-linecap="round"/></svg>',
+      rabbit: '<svg class="critter" viewBox="0 0 32 32"><ellipse cx="11" cy="8" rx="3.2" ry="8" fill="#f7d0c0"/><ellipse cx="21" cy="8" rx="3.2" ry="8" fill="#f7d0c0"/><ellipse cx="11" cy="8" rx="1.4" ry="5" fill="#f4a0b4"/><ellipse cx="21" cy="8" rx="1.4" ry="5" fill="#f4a0b4"/><circle cx="16" cy="20" r="9" fill="#fff6ea"/><circle cx="12" cy="19" r="1.6" fill="#2a1810"/><circle cx="20" cy="19" r="1.6" fill="#2a1810"/><ellipse cx="16" cy="23" rx="2" ry="1.4" fill="#f4a0b4"/></svg>',
+      bird: '<svg class="critter" viewBox="0 0 32 32"><ellipse cx="16" cy="18" rx="10" ry="9" fill="#f0c43c"/><circle cx="22" cy="10" r="5" fill="#f0c43c"/><polygon points="27,10 32,12 27,14" fill="#e07a3a"/><circle cx="23" cy="9" r="1.4" fill="#2a1810"/><ellipse cx="11" cy="20" rx="5" ry="3" fill="#e8a820"/><circle cx="14" cy="17" r="1.5" fill="#2a1810"/></svg>',
+      panda: '<svg class="critter" viewBox="0 0 32 32"><circle cx="16" cy="18" r="10" fill="#f7f2ea"/><circle cx="8" cy="10" r="5" fill="#2a1810"/><circle cx="24" cy="10" r="5" fill="#2a1810"/><ellipse cx="11" cy="17" rx="3.2" ry="2.6" fill="#2a1810"/><ellipse cx="21" cy="17" rx="3.2" ry="2.6" fill="#2a1810"/><circle cx="12" cy="17" r="1.1" fill="#fff"/><circle cx="22" cy="17" r="1.1" fill="#fff"/><ellipse cx="16" cy="22" rx="2" ry="1.4" fill="#2a1810"/></svg>',
+      fish: '<svg class="critter" viewBox="0 0 32 32"><ellipse cx="14" cy="16" rx="10" ry="7" fill="#3db0d4"/><polygon points="24,16 32,10 32,22" fill="#2a8cb0"/><circle cx="10" cy="14" r="2" fill="#fff"/><circle cx="10" cy="14" r="1" fill="#2a1810"/><path d="M8 18 q4 3 8 0" fill="none" stroke="#fff" stroke-width="1.4"/></svg>',
+    };
+    const phone = document.getElementById("phone");
+    const varLabel = document.getElementById("varLabel");
+    const stateLabel = document.getElementById("stateLabel");
+    const stateDump = document.getElementById("stateDump");
+    const clockEl = document.getElementById("clock");
+
+    let variant = "B";
+    let screen = "home";
+    let sound = true;
+    let largeTiles = true;
+    let showHints = true;
+    let lastMessage = "open";
+    let picked = null;
+    let gone = new Set();
+    let undoStack = [];
+    let pointed = [];
+    let buddyLine = "The table is ready.";
+    let shuffles = 0;
+
+    const CAT_SVG = `
+      <svg class="b-cat" viewBox="0 0 72 64" width="72" height="64" aria-hidden="true">
+        <ellipse cx="36" cy="58" rx="22" ry="5" fill="rgba(42,26,8,0.18)"/>
+        <circle cx="36" cy="36" r="22" fill="#f4a261"/>
+        <ellipse cx="22" cy="16" rx="8" ry="11" fill="#f4a261"/>
+        <ellipse cx="50" cy="16" rx="8" ry="11" fill="#f4a261"/>
+        <ellipse cx="22" cy="18" rx="4" ry="6" fill="#e76f51"/>
+        <ellipse cx="50" cy="18" rx="4" ry="6" fill="#e76f51"/>
+        <path d="M26 34 q10 8 20 0" fill="none" stroke="#4a281c" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="28" cy="32" r="3" fill="#4a281c"/>
+        <circle cx="44" cy="32" r="3" fill="#4a281c"/>
+        <ellipse cx="36" cy="40" rx="4" ry="3" fill="#e76f51"/>
+      </svg>`;
+
+    function greeting() {
+      const h = new Date().getHours();
+      if (h < 12) return "Good morning";
+      if (h < 17) return "Good afternoon";
+      return "Good evening";
+    }
+
+    function homeSpreadHTML() {
+      const tiles = [
+        ["cat", 6, 6, 1], ["dog", 66, 6, 1], ["dragon", 126, 6, 1], ["rabbit", 186, 6, 1], ["bird", 246, 6, 1],
+        ["panda", 6, 70, 1], ["fish", 66, 70, 1], ["cat", 126, 70, 1], ["dog", 186, 70, 1], ["dragon", 246, 70, 1],
+        ["rabbit", 36, 38, 2], ["bird", 96, 38, 2], ["panda", 156, 38, 2], ["fish", 216, 38, 2],
+        ["cat", 96, 88, 3], ["dog", 156, 88, 3],
+        ["dragon", 126, 10, 4],
+      ];
+      return tiles.map(([face, x, y, layer]) =>
+        `<div class="mj lg" style="left:${x}px;top:${y}px;z-index:${layer}">${FACES[face]}</div>`
+      ).join("");
+    }
+
+    function makeLayout() {
+      const DX = 54;
+      const DY = 58;
+      const faces = ["cat", "dog", "dragon", "rabbit", "bird", "panda", "fish"];
+      const rows = [
+        { row: 0, cols: [1, 2, 3, 4, 5] },
+        { row: 1, cols: [0, 1, 2, 3, 4, 5] },
+        { row: 2, cols: [0, 1, 2, 3, 4, 5, 6] },
+        { row: 3, cols: [0, 1, 2, 3, 4, 5] },
+        { row: 4, cols: [1, 2, 3, 4, 5] },
+      ];
+      const tiles = [];
+      let n = 1;
+      rows.forEach(({ row, cols }) => {
+        cols.forEach((col, i) => {
+          let face = faces[(n + row) % faces.length];
+          if (row === 2 && (i === 0 || i === cols.length - 1)) face = "cat";
+          if (row === 0 && (i === 0 || i === cols.length - 1)) face = "dog";
+          tiles.push({
+            id: n++,
+            face,
+            col,
+            row,
+            x: 2 + col * DX,
+            y: 6 + row * DY,
+            layer: 1,
+          });
+        });
+      });
+      [[2, 1], [3, 1], [4, 1], [2, 2], [3, 2], [4, 2]].forEach(([col, row], i) => {
+        tiles.push({
+          id: n++,
+          face: faces[i % faces.length],
+          col,
+          row,
+          x: 2 + col * DX - 8,
+          y: 6 + row * DY - 8,
+          layer: 2,
+        });
+      });
+      tiles.push({
+        id: n++,
+        face: "dragon",
+        col: 3,
+        row: 1.5,
+        x: 2 + 3 * DX - 12,
+        y: 6 + 1.5 * DY - 12,
+        layer: 3,
+      });
+      return tiles;
+    }
+    let B_LAYOUT = makeLayout();
+
+    function remainingTiles() {
+      return B_LAYOUT.filter((t) => !gone.has(t.id));
+    }
+    function remainingCount() {
+      return remainingTiles().length;
+    }
+    function tileBox(t) {
+      return { l: t.x, r: t.x + 44, top: t.y, b: t.y + 58 };
+    }
+    function boxesOverlap(a, b) {
+      return a.l < b.r && a.r > b.l && a.top < b.b && a.b > b.top;
+    }
+    function isCovered(t) {
+      const box = tileBox(t);
+      return remainingTiles().some((o) => o.layer > t.layer && boxesOverlap(box, tileBox(o)));
+    }
+    function isFree(t) {
+      if (gone.has(t.id)) return false;
+      if (isCovered(t)) return false;
+      const rowmates = remainingTiles().filter((o) => o.id !== t.id && o.layer === t.layer && o.row === t.row);
+      const left = rowmates.some((o) => o.col === t.col - 1);
+      const right = rowmates.some((o) => o.col === t.col + 1);
+      return !left || !right;
+    }
+    function findFreePair() {
+      const free = remainingTiles().filter(isFree);
+      for (let i = 0; i < free.length; i++) {
+        for (let j = i + 1; j < free.length; j++) {
+          if (free[i].face === free[j].face) return [free[i], free[j]];
+        }
+      }
+      return null;
+    }
+
+    function tableReadyLine() {
+      const h = new Date().getHours();
+      if (h < 12) return "Morning table is ready.";
+      if (h < 17) return "The afternoon table is ready.";
+      return "The evening table is ready.";
+    }
+
+    function bTileEl(t) {
+      const freeNow = isFree(t);
+      const glow = showHints && freeNow;
+      const pickedOn = picked === t.id;
+      const isPointed = pointed.includes(t.id);
+      const cls = ["mj", glow ? "free" : "", pickedOn ? "picked" : "", isPointed ? "pointed" : "", gone.has(t.id) ? "gone" : ""]
+        .filter(Boolean).join(" ");
+      return `<button class="${cls}" data-tile="${t.id}" data-face="${t.face}" style="left:${t.x}px;top:${t.y}px;z-index:${t.layer * 10}">${FACES[t.face]}</button>`;
+    }
+
+    function bPlayHTML() {
+      const tiles = B_LAYOUT.map(bTileEl).join("");
+      const won = remainingCount() === 0;
+      return `
+        <div class="b-table">
+          <div class="b-hud">
+            <button class="btn back-btn" data-go="home">Home</button>
+            <div class="b-chip"><b>${remainingCount()}</b><span>tiles left</span></div>
+          </div>
+          <div class="b-felt is-centered">
+            <div class="b-lantern left"></div>
+            <div class="b-lantern right"></div>
+            <div class="b-play-stage">
+              <div class="b-board-wrap"><div class="b-turtle">${tiles}</div></div>
+              <div class="b-buddy">
+                <p class="b-bubble">${won ? "The table is clear. Tea?" : buddyLine}</p>
+                ${CAT_SVG}
+              </div>
+            </div>
+          </div>
+          <div class="b-dock">
+            <button class="btn" data-act="undo" ${undoStack.length ? "" : "disabled"}>Undo</button>
+            <button class="btn" data-act="hint">${findFreePair() ? "Hint" : "Help"}</button>
+          </div>
+        </div>`;
+    }
+
+    function basicPlayHTML() {
+      const tiles = [
+        [ "cat", 92, 28 ], [ "dog", 132, 28 ], [ "dragon", 172, 28 ],
+        [ "rabbit", 52, 84 ], [ "bird", 92, 84 ], [ "panda", 132, 84 ], [ "fish", 172, 84 ], [ "dog", 212, 84 ],
+        [ "cat", 32, 140, true ], [ "dragon", 72, 140 ], [ "rabbit", 112, 140 ], [ "bird", 152, 140 ], [ "panda", 192, 140 ], [ "cat", 232, 140, true ],
+        [ "fish", 52, 196 ], [ "dog", 92, 196 ], [ "dragon", 132, 196 ], [ "rabbit", 172, 196 ], [ "bird", 212, 196 ],
+        [ "panda", 112, 108 ], [ "fish", 152, 108 ], [ "dragon", 132, 72 ],
+      ].map(([face, x, y, free]) =>
+        `<div class="mj${free && showHints ? " free" : ""}" style="left:${x}px;top:${y}px">${FACES[face]}</div>`
+      ).join("");
+      return `
+        <div class="back-row">
+          <button class="btn back-btn" data-go="home">Home</button>
+          <strong>Match pairs</strong>
+        </div>
+        <p class="hint-line">Look only — tiles are not playable yet.</p>
+        <div class="play-stack"><div class="turtle">${tiles}</div></div>`;
+    }
+
+    function settingsHTML(which) {
+      const rows = `
+        <div class="settings-list">
+          <div class="setting-row">
+            <div><strong>Sound</strong><span>Soft taps when a pair matches</span></div>
+            <button class="toggle ${sound ? "on" : ""}" data-toggle="sound" aria-label="Sound"></button>
+          </div>
+          <div class="setting-row">
+            <div><strong>Bigger tiles</strong><span>Easier to see and tap</span></div>
+            <button class="toggle ${largeTiles ? "on" : ""}" data-toggle="largeTiles" aria-label="Bigger tiles"></button>
+          </div>
+          <div class="setting-row">
+            <div><strong>Show matches</strong><span>Glow tiles that can be paired</span></div>
+            <button class="toggle ${showHints ? "on" : ""}" data-toggle="showHints" aria-label="Show matches"></button>
+          </div>
+        </div>`;
+      if (which === "B") {
+        return `
+          <div class="b-table">
+            <div class="b-hud">
+              <button class="btn back-btn" data-go="home">Home</button>
+              <div class="b-chip"><b>Settings</b><span>Evening table</span></div>
+            </div>
+            <div class="b-felt is-centered">
+              <div class="b-lantern left"></div>
+              <div class="b-lantern right"></div>
+              <div class="b-center">
+              ${rows}
+              <div class="b-how">
+                <strong>How to play</strong>
+                <span>Tap two matching animals that are free on the left or right. Pairs disappear.</span>
+              </div>
+              </div>
+            </div>
+          </div>`;
+      }
+      return `
+        <div class="back-row">
+          <button class="btn back-btn" data-go="home">Home</button>
+          <strong>Settings</strong>
+        </div>${rows}`;
+    }
+
+    function fillInnerScreens() {
+      document.querySelector(".b-spread").innerHTML = homeSpreadHTML();
+      document.querySelector('[data-for="A"] [data-screen="play"]').innerHTML = basicPlayHTML();
+      document.querySelector('[data-for="C"] [data-screen="play"]').innerHTML = basicPlayHTML();
+      document.querySelector('[data-for="B"] [data-screen="play"]').innerHTML = bPlayHTML();
+      document.querySelector('[data-for="A"] [data-screen="settings"]').innerHTML = settingsHTML("A");
+      document.querySelector('[data-for="B"] [data-screen="settings"]').innerHTML = settingsHTML("B");
+      document.querySelector('[data-for="C"] [data-screen="settings"]').innerHTML = settingsHTML("C");
+    }
+
+    function renderState() {
+      phone.classList.toggle("large-tiles", largeTiles);
+      const snapshot = {
+        variant, screen, sound, largeTiles, showHints, picked,
+        remaining: remainingCount(), pointed, shuffles, buddyLine, lastMessage,
+      };
+      stateLabel.textContent = `variant=${variant} · screen=${screen}`;
+      stateDump.textContent = JSON.stringify(snapshot, null, 2);
+    }
+
+    function readVariantFromURL() {
+      const v = new URLSearchParams(location.search).get("variant");
+      if (v && VARIANTS[v.toUpperCase()]) return v.toUpperCase();
+      return "B";
+    }
+    function readScreenFromURL() {
+      const s = new URLSearchParams(location.search).get("screen");
+      if (["home", "play", "settings"].includes(s)) return s;
+      return "home";
+    }
+    function setURL(v, s) {
+      const url = new URL(location.href);
+      url.searchParams.set("variant", v);
+      url.searchParams.set("screen", s);
+      history.replaceState(null, "", url);
+    }
+
+    function fitDevice() {
+      const shell = document.getElementById("deviceShell");
+      const w = 390;
+      const h = 844;
+      const maxW = window.innerWidth - 24;
+      const maxH = window.innerHeight - 168;
+      const s = Math.min(1, maxW / w, maxH / h);
+      shell.style.width = `${Math.round(w * s)}px`;
+      shell.style.height = `${Math.round(h * s)}px`;
+      phone.style.transform = `scale(${s})`;
+      phone.style.transformOrigin = "top left";
+    }
+
+    function showScreen(next) {
+      screen = next;
+      setURL(variant, screen);
+      document.querySelectorAll(".variant-root:not([hidden]) .screen").forEach((el) => {
+        el.classList.toggle("active", el.dataset.screen === next);
+      });
+      document.querySelectorAll(".flow-bar button").forEach((btn) => {
+        btn.classList.toggle("on", btn.dataset.flow === next);
+      });
+      lastMessage = `screen:${next}`;
+      renderState();
+    }
+
+    function applyVariant(v) {
+      variant = v;
+      phone.dataset.variant = v;
+      varLabel.textContent = `${v} — ${VARIANTS[v].name}`;
+      document.querySelectorAll(".variant-root").forEach((root) => {
+        root.hidden = root.dataset.for !== v;
+      });
+      lastMessage = "variant-switch";
+      showScreen(readScreenFromURL());
+    }
+
+    function cycle(dir) {
+      const i = KEYS.indexOf(variant);
+      const next = KEYS[(i + dir + KEYS.length) % KEYS.length];
+      const url = new URL(location.href);
+      url.searchParams.set("variant", next);
+      url.searchParams.set("screen", "home");
+      history.replaceState(null, "", url);
+      applyVariant(next);
+    }
+
+    function tickClock() {
+      const d = new Date();
+      clockEl.textContent = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+      document.querySelectorAll("[data-greet]").forEach((el) => { el.textContent = greeting(); });
+    }
+
+    function rerenderPlay() {
+      document.querySelector('[data-for="B"] [data-screen="play"]').innerHTML = bPlayHTML();
+      renderState();
+    }
+
+    function resetTable() {
+      B_LAYOUT = makeLayout();
+      gone = new Set();
+      picked = null;
+      undoStack = [];
+      pointed = [];
+      shuffles = 0;
+      buddyLine = tableReadyLine();
+      lastMessage = "new-table";
+    }
+
+    function onTile(id) {
+      const tile = B_LAYOUT.find((t) => t.id === id);
+      if (!tile || gone.has(id) || !isFree(tile)) {
+        buddyLine = "That one is still tucked in.";
+        lastMessage = "blocked-tile";
+        rerenderPlay();
+        return;
+      }
+      pointed = [];
+      if (picked == null) {
+        picked = id;
+        buddyLine = "One more like that one.";
+        lastMessage = "pick";
+      } else if (picked === id) {
+        picked = null;
+        buddyLine = "Whenever you are ready.";
+        lastMessage = "unpick";
+      } else {
+        const a = B_LAYOUT.find((t) => t.id === picked);
+        if (a.face === tile.face) {
+          undoStack.push([a.id, tile.id]);
+          gone.add(a.id);
+          gone.add(tile.id);
+          picked = null;
+          lastMessage = "match";
+          buddyLine = remainingCount() === 0 ? "The table is clear. Tea?" : "Nice pair.";
+        } else {
+          picked = id;
+          lastMessage = "mismatch";
+          buddyLine = "Those two are different. Try another.";
+        }
+      }
+      rerenderPlay();
+    }
+
+    function shuffleKind() {
+      const rest = remainingTiles();
+      const faces = rest.map((t) => t.face);
+      for (let i = faces.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [faces[i], faces[j]] = [faces[j], faces[i]];
+      }
+      rest.forEach((t, i) => { t.face = faces[i]; });
+      let pair = findFreePair();
+      if (!pair) {
+        const free = remainingTiles().filter(isFree);
+        if (free.length >= 2) {
+          free[1].face = free[0].face;
+          pair = [free[0], free[1]];
+        }
+      }
+      shuffles += 1;
+      pointed = pair ? [pair[0].id, pair[1].id] : [];
+      buddyLine = "Let’s try another way.";
+      lastMessage = "shuffle";
+      picked = null;
+    }
+
+    function onHint() {
+      const pair = findFreePair();
+      if (pair) {
+        pointed = [pair[0].id, pair[1].id];
+        buddyLine = "These two can go.";
+        lastMessage = "hint";
+        rerenderPlay();
+        return;
+      }
+      shuffleKind();
+      rerenderPlay();
+    }
+
+    function onUndo() {
+      if (!undoStack.length) return;
+      const ids = undoStack.pop();
+      ids.forEach((id) => gone.delete(id));
+      picked = null;
+      pointed = [];
+      buddyLine = "Here they are again.";
+      lastMessage = "undo";
+      rerenderPlay();
+    }
+
+    phone.addEventListener("click", (e) => {
+      const go = e.target.closest("[data-go]");
+      if (go) {
+        if (go.dataset.go === "play") resetTable();
+        showScreen(go.dataset.go);
+        return;
+      }
+      const act = e.target.closest("[data-act]");
+      if (act) {
+        if (act.dataset.act === "hint") onHint();
+        if (act.dataset.act === "undo") onUndo();
+        return;
+      }
+      const tile = e.target.closest("[data-tile]");
+      if (tile) {
+        onTile(Number(tile.dataset.tile));
+        return;
+      }
+      const tog = e.target.closest("[data-toggle]");
+      if (tog) {
+        const key = tog.dataset.toggle;
+        if (key === "sound") sound = !sound;
+        if (key === "largeTiles") largeTiles = !largeTiles;
+        if (key === "showHints") showHints = !showHints;
+        lastMessage = `toggle:${key}`;
+        fillInnerScreens();
+        showScreen("settings");
+      }
+    });
+
+    document.getElementById("prevVar").addEventListener("click", () => cycle(-1));
+    document.getElementById("nextVar").addEventListener("click", () => cycle(1));
+    document.querySelectorAll(".flow-bar button").forEach((btn) => {
+      btn.addEventListener("click", () => showScreen(btn.dataset.flow));
+    });
+    document.addEventListener("keydown", (e) => {
+      const tag = e.target.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || e.target.isContentEditable) return;
+      if (e.key === "ArrowLeft") cycle(-1);
+      if (e.key === "ArrowRight") cycle(1);
+    });
+
+    buddyLine = tableReadyLine();
+    fillInnerScreens();
+    tickClock();
+    applyVariant(readVariantFromURL());
+    fitDevice();
+    window.addEventListener("resize", fitDevice);
+  </script>
+</body>
+</html>
