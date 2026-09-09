@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Linking, StyleSheet, View } from 'react-native';
+import { PRIVACY_POLICY_URL } from '../constants/brand';
 import { useGameStore } from '../store/gameStore';
 import { TOP_BUFFER } from '../theme/androidTopInset';
 import { FONTS, TEA } from '../theme/tea';
@@ -100,6 +101,16 @@ export function SettingsScreen() {
               to sit at the next one. If you get stuck, Help will find another way.
             </UiText>
           </View>
+          <CreamButton
+            onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}
+            accessibilityRole="link"
+            accessibilityLabel="Privacy Policy"
+            style={styles.privacy}
+          >
+            <UiText fit style={styles.name}>
+              Privacy Policy
+            </UiText>
+          </CreamButton>
         </View>
       </View>
     </TeaScene>
@@ -187,6 +198,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 16,
     backgroundColor: TEA.creamBtn,
+  },
+  privacy: {
+    minHeight: 54,
   },
   toggle: {
     width: 68,
