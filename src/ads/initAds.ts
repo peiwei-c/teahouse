@@ -1,7 +1,9 @@
 import mobileAds, { MaxAdContentRating } from 'react-native-google-mobile-ads';
 import { preloadInterstitial } from './interstitial';
 
-export async function initAds(): Promise<void> {
+let started: Promise<boolean> | null = null;
+
+async function startAds(): Promise<boolean> {
   try {
     await mobileAds().setRequestConfiguration({
       maxAdContentRating: MaxAdContentRating.PG,
@@ -9,7 +11,17 @@ export async function initAds(): Promise<void> {
     });
     await mobileAds().initialize();
     preloadInterstitial();
+    return true;
   } catch {
-    // Keep the table playable if ads fail to start.
+    return false;
   }
+}
+
+export function ensureAds(): Promise<boolean> {
+  if (!started) started = startAds();
+  return started;
+}
+
+export async function initAds(): Promise<void> {
+  await ensureAds();
 }
