@@ -1,5 +1,6 @@
 import React from 'react';
 import { Image, ImageBackground, StyleSheet, View } from 'react-native';
+import { unlockAudio } from '../audio/session';
 import { APP_NAME, APP_PLAY, APP_PLAY_HINT } from '../constants/brand';
 import { greeting, specFor, type Face } from '../engine/table';
 import { useGameStore } from '../store/gameStore';
@@ -61,7 +62,14 @@ export function HomeScreen() {
         </View>
 
         <View style={styles.tray}>
-          <CreamButton onPress={startPlay} style={styles.play} accessibilityLabel="Play">
+          <CreamButton
+            onPress={() => {
+              unlockAudio();
+              startPlay();
+            }}
+            style={styles.play}
+            accessibilityLabel="Play"
+          >
             <Image source={FACE_IMAGES.cat} style={styles.playCat} />
             <UiText fit style={styles.playTitle}>
               {APP_PLAY}
@@ -71,7 +79,10 @@ export function HomeScreen() {
             </UiText>
           </CreamButton>
           <CreamButton
-            onPress={openSettings}
+            onPress={() => {
+              unlockAudio();
+              openSettings();
+            }}
             style={styles.settings}
             accessibilityLabel="Settings"
           >

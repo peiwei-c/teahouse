@@ -17,6 +17,7 @@ import { HomeScreen } from './src/components/HomeScreen';
 import { LoadingScreen } from './src/components/LoadingScreen';
 import { PlayScreen } from './src/components/PlayScreen';
 import { SettingsScreen } from './src/components/SettingsScreen';
+import { useGameAudio } from './src/audio/session';
 import { useGameStore } from './src/store/gameStore';
 import { FONT_MAP } from './src/theme/fonts';
 import { ANDROID_TOP_INSET } from './src/theme/androidTopInset';
@@ -48,6 +49,7 @@ function AppShell() {
   const hydrate = useGameStore((s) => s.hydrate);
   const goHome = useGameStore((s) => s.goHome);
   const [splashElapsed, setSplashElapsed] = useState(false);
+  useGameAudio();
 
   useEffect(() => {
     void hydrate();

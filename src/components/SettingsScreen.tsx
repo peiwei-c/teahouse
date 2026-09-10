@@ -1,5 +1,6 @@
 import React from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
+import { setSoundEnabled } from '../audio/session';
 import { PRIVACY_POLICY_URL } from '../constants/brand';
 import { useGameStore } from '../store/gameStore';
 import { TOP_BUFFER } from '../theme/androidTopInset';
@@ -52,12 +53,16 @@ export function SettingsScreen() {
                 Sound
               </UiText>
               <UiText numberOfLines={2} style={styles.help}>
-                Soft taps when a pair matches
+                Quiet music, a tap for free tiles, a thud when a tile is tucked in
               </UiText>
             </View>
             <Toggle
               on={settings.sound}
-              onPress={() => toggleSetting('sound')}
+              onPress={() => {
+                const next = !settings.sound;
+                toggleSetting('sound');
+                setSoundEnabled(next);
+              }}
               label="Sound"
             />
           </View>

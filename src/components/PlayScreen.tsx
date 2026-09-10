@@ -14,6 +14,7 @@ import { TOP_BUFFER } from '../theme/androidTopInset';
 import { FONTS, TEA } from '../theme/tea';
 import { shouldShowInterstitial } from '../ads/cadence';
 import { showInterstitial } from '../ads/interstitial';
+import { playTileSfx } from '../audio/session';
 import { ClearPopup } from './ClearPopup';
 import { CreamButton, TeaScene } from './TeaScene';
 import { Tile, tileDepthFor } from './Tile';
@@ -187,7 +188,10 @@ export function PlayScreen() {
                     free={showMatches && free}
                     picked={table.picked === tile.id}
                     pointed={table.pointed.includes(tile.id)}
-                    onPress={() => tapTile(tile.id)}
+                    onPress={() => {
+                      playTileSfx(free);
+                      tapTile(tile.id);
+                    }}
                   />
                 </View>
               );

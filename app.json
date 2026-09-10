@@ -2,7 +2,7 @@
   "expo": {
     "name": "Tea House",
     "slug": "tea-house-solitaire",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -47,6 +47,14 @@
         {
           "androidAppId": "ca-app-pub-3994151354323315~3295465877",
           "iosAppId": "ca-app-pub-3994151354323315~3295465877"
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "enableBackgroundPlayback": false
         }
       ]
     ]
